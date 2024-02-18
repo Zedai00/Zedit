@@ -3,8 +3,11 @@
 #endif 
 
 #include <windows.h>
+#include "MenuDef.h"
 
-LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+void AddMenus(HWND hWnd);
+void AddControls(HWND hWnd);
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow)
 {
@@ -21,7 +24,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 
     // Create the window.
 
-    HWND hwnd = CreateWindowEx(
+    HWND hWnd = CreateWindowEx(
         0,                              // Optional window styles.
         CLASS_NAME,                     // Window class
         L"Zedit",    // Window text
@@ -36,12 +39,12 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
         NULL        // Additional application data
     );
 
-    if (hwnd == NULL)
+    if (hWnd == NULL)
     {
         return 0;
     }
 
-    ShowWindow(hwnd, nCmdShow);
+    ShowWindow(hWnd, nCmdShow);
 
     // Run the message loop.
 
@@ -55,27 +58,50 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
     return 0;
 }
 
-LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
     switch (uMsg)
     {
-    case WM_DESTROY:
-        PostQuitMessage(0);
-        return 0;
-
+    case WM_COMMAND: 
+        switch (wParam) {
+        case FILE_MENU_EXIT:
+            DestroyWindow(hWnd);
+            break;
+        case FILE_MENU_NEW:
+            break;
+        }
+        break;
     case WM_PAINT:
     {
         PAINTSTRUCT ps;
-        HDC hdc = BeginPaint(hwnd, &ps);
-
+        HDC hdc = BeginPaint(hWnd, &ps);
         // All painting occurs here, between BeginPaint and EndPaint.
-
+        AddMenus(hWnd);
+        AddControls(hWnd);
         FillRect(hdc, &ps.rcPaint, (HBRUSH)(COLOR_WINDOW + 2));
 
-        EndPaint(hwnd, &ps);
+        EndPaint(hWnd, &ps);
+        break;
     }
-    return 0;
+    case WM_DESTROY:
+        PostQuitMessage(0);
+        return 0;
+    }
+    return DefWindowProc(hWnd, uMsg, wParam, lParam);
+}
 
-    }
-    return DefWindowProc(hwnd, uMsg, wParam, lParam);
+void AddMenus(HWND hWnd) {
+    HMENU hMenu = CreateMenu();
+
+    HMENU hFileMenu = CreateMenu();
+    AppendMenu(hFileMenu, MF_STRING, FILE_MENU_NEW, L"New");
+    AppendMenu(hFileMenu, MF_SEPARATOR, NULL,NULL);
+    AppendMenu(hFileMenu, MF_STRING, FILE_MENU_OPEN, L"Open");
+    AppendMenu(hFileMenu, MF_SEPARATOR, NULL,NULL);
+    AppendMenu(hFileMenu, MF_STRING, FILE_MENU_SAVE, L"Save");
+    AppendMenu(hFileMenu, MF_SEPARATOR, NULL,NULL);
+    AppendMenu(hFileMenu, MF_STRING, FILE_MENU_EXIT, L"Exit");
+    AppendMenu(hMenu, MF_POPUP, (UINT_PTR) hFileMenu, L"File");
+    AppendMenu(hMenu, MF_STRING, 2, L"Help");
+    SetMenu(hWnd, hMenu);
 }
