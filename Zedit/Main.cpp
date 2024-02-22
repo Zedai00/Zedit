@@ -8,6 +8,8 @@
 #include <fstream>
 #include <sstream>
 #include <algorithm>
+#include <Shlwapi.h>
+
 
 LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 void AddMenus();
@@ -16,10 +18,13 @@ void openFile(int);
 void display_file(LPWSTR path);
 void write_file(LPWSTR path);
 void clear_text();
+void set_file_title();
 
 HWND hWnd;
 HWND hEdit;
-
+bool openedFile = false;
+wchar_t global_file_name[MAX_PATH] = L"";
+OPENFILENAME ofn;
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow)
 {
 	// Register the window class.
@@ -82,6 +87,10 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		case FILE_MENU_SAVE:
 			openFile(0);
 			break;
+		case FILE_MENU_SAVE_AS:
+			openedFile = false;
+			openFile(0);
+			break;
 		case FILE_MENU_OPEN:
 			openFile(1);
 			break;
@@ -99,7 +108,6 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 }
 
 void openFile(int choice) {
-	OPENFILENAME ofn;
 	wchar_t file_name[MAX_PATH] = L"";
 	ZeroMemory(&ofn, sizeof(OPENFILENAME));
 	ofn.lStructSize = sizeof(OPENFILENAME);
@@ -111,18 +119,31 @@ void openFile(int choice) {
 	ofn.nFilterIndex = 1;
 
 	if (choice == 0) {
-		GetSaveFileName(&ofn);
-		write_file(ofn.lpstrFile);
-	}
-	else if (choice == 1) {
-		GetOpenFileName(&ofn);
-		display_file(ofn.lpstrFile);
+		if (openedFile) {
+			write_file(global_file_name);
+		}
+		else {
+			GetSaveFileName(&ofn);
+			wcscpy_s(global_file_name, ofn.lpstrFile);
+			set_file_title();
+			write_file(ofn.lpstrFile);
+			openedFile = true;
+		}
 	}
 	else {
-
+		GetOpenFileName(&ofn);
+		wcscpy_s(global_file_name, ofn.lpstrFile);
+		set_file_title();
+		display_file(ofn.lpstrFile);
+		openedFile = true;
 	}
 }
-
+void set_file_title() {
+	wchar_t fileName[MAX_PATH];
+	wcscpy_s(fileName, global_file_name);
+	PathStripPath(fileName);
+	SetWindowText(hWnd, fileName);
+}
 void write_file(LPWSTR path) {
 	std::wofstream file(path);
 	int length = GetWindowTextLength(hEdit);
@@ -153,11 +174,13 @@ void AddMenus() {
 	AppendMenu(hFileMenu, MF_SEPARATOR, NULL, NULL);
 	AppendMenu(hFileMenu, MF_STRING, FILE_MENU_SAVE, L"Save");
 	AppendMenu(hFileMenu, MF_SEPARATOR, NULL, NULL);
-	AppendMenu(hFileMenu, MF_STRING, FILE_MENU_SAVE, L"Save As");
+	AppendMenu(hFileMenu, MF_STRING, FILE_MENU_SAVE_AS, L"Save As");
 	AppendMenu(hFileMenu, MF_SEPARATOR, NULL, NULL);
 	AppendMenu(hFileMenu, MF_STRING, FILE_MENU_EXIT, L"Exit");
+
 	AppendMenu(hMenu, MF_POPUP, (UINT_PTR)hFileMenu, L"File");
 	AppendMenu(hMenu, MF_STRING, 2, L"Help");
+
 	SetMenu(hWnd, hMenu);
 }
 
@@ -173,4 +196,3 @@ void AddTextEditor() {
 	GetWindowDimensions(width, height);
 	hEdit = CreateWindow(L"Edit", NULL, WS_VISIBLE | ES_AUTOVSCROLL | ES_MULTILINE | WS_CHILD, CW_USEDEFAULT, CW_USEDEFAULT, width, height, hWnd, NULL, NULL, NULL);
 }
-
